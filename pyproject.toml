@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "php-docblocker"
+version = "0.1.0"
+description = "Generate PHP function docblocks with Ollama from Zed tasks"
+requires-python = ">=3.9"
+
+[project.scripts]
+php-docblocker = "php_docblocker:main"
+
+[tool.setuptools]
+py-modules = ["php_docblocker"]
+package-dir = {"" = "scripts"}
