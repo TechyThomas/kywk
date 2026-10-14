@@ -49,7 +49,8 @@ These are Zed Tasks rather than a traditional installable editor extension. Zed'
 
 - Only named `function` declarations and methods are targeted. Anonymous closures are not independently documented.
 - The runner skips a function when a PHPDoc block immediately precedes it.
-- Selection mode requires an exact, unique match in the saved file. Ambiguous or stale selections produce an error and leave the file untouched.
+- For functions returning associative arrays, the prompt asks the model to document returned keys and value types using PHPDoc array-shape syntax in `@return`, including optional keys when appropriate, to support IDE completion.
+- Selection mode requires a unique match in the saved file after normalizing whitespace. Ambiguous or stale selections produce an error and leave the file untouched.
 - Generated comments are inserted into the file on disk. Save first so the saved source matches the editor buffer.
 - The model receives each function's source, which may include implementation details. Use a trusted Ollama endpoint.
 

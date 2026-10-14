@@ -41,8 +41,12 @@ def request_docblock(config, function_source, function_name):
     prompt = (
         "Write a PHPDoc block for this PHP function or method. Return only the complete PHPDoc comment, "
         "starting with /** and ending with */. Include useful @param tags with accurate PHP types, "
-        "@return when appropriate, and a concise description. Do not repeat the function code. "
-        "Do not invent behavior or types unsupported by the code.\n\n"
+        "@return when appropriate, and a concise description. When the function returns an associative "
+        "array, use a PHPDoc array shape in @return (for example, array{{success: bool, data: User}}); "
+        "document every returned key with its inferred value type, and mark keys optional with ? when "
+        "they are absent on some return paths (for example, array{{data?: User}}). Do not describe a "
+        "plain list as an array shape. Do not repeat the function code. Do not invent behavior, keys, "
+        "or types unsupported by the code.\n\n"
         "Function name: {}\n\n{}"
     ).format(function_name, function_source)
     body = json.dumps({
