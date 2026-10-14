@@ -176,34 +176,54 @@ def process_source(source, config):
 def process_selection(source, selection, config):
     if not selection:
         raise RuntimeError("Select PHP code in the editor first")
-    positions = [m.start() for m in re.finditer(re.escape(selection), source)]
-    if len(positions) != 1:
+    # Zed task interpolation can normalize line breaks or indentation in selected text.
+    # Match the same non-whitespace tokens while allowing the saved file's whitespace.
+    tokens = selection.split()
+    if not tokens:
+        raise RuntimeError("Select PHP code in the editor first")
+    pattern = r"\s+".join(re.escape(token) for token in tokens)
+    matches = list(re.finditer(pattern, source))
+    if len(matches) != 1:
         raise RuntimeError(
-            "The selection must match exactly once in the saved file (found {} matches). Save the file and retry."
-            .format(len(positions))
+            "The selection must match uniquely in the saved file (found {} matches). Save the file and retry."
+            .format(len(matches))
         )
-    updated, added, skipped = process_source(selection, config)
+    match = matches[0]
+    start, end = match.span()
+    # Include the declaration line's original indentation when the selection begins
+    # after it, so generated PHPDoc uses the exact indentation from the saved source.
+    line_start = source.rfind("\n", 0, start) + 1
+    if source[line_start:start].strip() == "":
+        start = line_start
+    selected_source = source[start:end]
+    updated, added, skipped = process_source(selected_source, config)
     if added == 0:
         return source, added, skipped
-    start = positions[0]
-    return source[:start] + updated + source[start + len(selection):], added, skipped
+    return source[:start] + updated + source[end:], added, skipped
 
 
 def _run():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--file", required=True, help="PHP file to update")
     parser.add_argument("--selection", help="Exact selected source from Zed")
+    parser.add_argument(
+        "--selection-stdin", action="store_true",
+        help="Read selected source from standard input"
+    )
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     args = parser.parse_args()
+    if args.selection is not None and args.selection_stdin:
+        raise RuntimeError("Use either --selection or --selection-stdin, not both")
     path = Path(args.file)
     if path.suffix.lower() != ".php":
         raise RuntimeError("The active file must have a .php extension")
     source = path.read_text(encoding="utf-8")
     config = load_config(args.config)
-    if args.selection is None:
+    selection = sys.stdin.read() if args.selection_stdin else args.selection
+    if selection is None:
         updated, added, skipped = process_source(source, config)
     else:
-        updated, added, skipped = process_selection(source, args.selection, config)
+        updated, added, skipped = process_selection(source, selection, config)
     if updated != source:
         path.write_text(updated, encoding="utf-8")
     print("Added {} docblock(s); skipped {} function(s) with an existing docblock.".format(added, skipped))

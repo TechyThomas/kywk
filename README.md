@@ -35,14 +35,9 @@ Install the project as a user command:
 python3 -m pip install --user .
 ```
 
-Ensure the install location for user scripts is on `PATH` in Zed's environment. Then copy the task definitions from [`.zed/tasks.json`](.zed/tasks.json) into your PHP project's `.zed/tasks.json`, changing each runner script path argument to `php-docblocker`. For example, use:
+Ensure the install location for user scripts is on `PATH` in Zed's environment. Then copy the task definitions from [`.zed/tasks.json`](.zed/tasks.json) into your PHP project's `.zed/tasks.json`.
 
-```json
-"command": "php-docblocker",
-"args": ["--file", "$ZED_FILE"]
-```
-
-For the selection task, append `"--selection", "$ZED_SELECTED_TEXT"` to `args`. Alternatively, use the script directly by pointing the task command to the Python interpreter and the full path to `scripts/php_docblocker.py`.
+Alternatively, use the script directly by pointing the task command to the Python interpreter and the full path to `scripts/php_docblocker.py`.
 
 ## Run in Zed
 

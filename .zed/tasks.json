@@ -8,19 +8,15 @@
     ],
     "cwd": "$ZED_WORKTREE_ROOT",
     "use_new_terminal": false,
-    "allow_concurrent_runs": false
+    "allow_concurrent_runs": false,
+    "save": "current"
   },
   {
     "label": "PHP Docblocker: Selection",
-    "command": "php-docblocker",
-    "args": [
-      "--file",
-      "$ZED_FILE",
-      "--selection",
-      "$ZED_SELECTED_TEXT"
-    ],
+    "command": "php-docblocker --file \"$ZED_FILE\" --selection-stdin <<'__PHP_DOCBLOCKER_SELECTION_29C9E6B4__'\n$ZED_SELECTED_TEXT\n__PHP_DOCBLOCKER_SELECTION_29C9E6B4__",
     "cwd": "$ZED_WORKTREE_ROOT",
     "use_new_terminal": false,
-    "allow_concurrent_runs": false
+    "allow_concurrent_runs": false,
+    "save": "current"
   }
 ]
