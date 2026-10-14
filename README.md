@@ -1,13 +1,14 @@
 # PHP Docblocker for Zed + Ollama
 
-Generate PHPDoc comments for named PHP functions and methods using an Ollama model. Zed exposes the current file and selected text through its task system, so this project provides two task commands:
+Generate PHPDoc comments for named PHP functions and methods, or request code reviews, using an Ollama model. Zed exposes the current file, selected text, and project root through its task system, so this project provides these tasks:
 
 - **PHP Docblocker: Current File** adds docblocks to named functions and methods in the saved PHP file.
 - **PHP Docblocker: Selection** adds docblocks to named functions and methods in the selected code.
-- **PHP Code Review (Ollama): Current File** asks for a review of the saved PHP file and prints a findings report without changing it.
-- **PHP Code Review (Ollama): Selection** reviews selected PHP code and prints a findings report without changing it.
+- **PHP Code Review (Ollama): Current File** asks for a review of the saved PHP file and writes a findings report without changing it.
+- **PHP Code Review (Ollama): Selection** reviews selected PHP code and writes a findings report without changing it.
+- **PHP Code Review (Ollama): Whole Project** reviews source and configuration files across the project in batches and writes one report.
 
-The runner uses only Python's standard library. It sends each function to Ollama's `/api/chat` endpoint and inserts the returned comment into the file. Existing adjacent PHPDoc comments are skipped.
+The runner uses only Python's standard library. It sends function code or reviewable project files to Ollama's `/api/chat` endpoint. Docblock tasks insert the returned comment into the file; review tasks write a Markdown report and leave source files unchanged. Existing adjacent PHPDoc comments are skipped.
 
 ## Configure Ollama
 
@@ -45,7 +46,7 @@ Alternatively, use the script directly by pointing the task command to the Pytho
 
 Open the Command Palette, choose **task: spawn**, then select a PHP Docblocker or PHP Code Review task. Selection tasks only appear when text is selected. Tasks save the current buffer before running. Docblock selection mode requires a unique match in the saved file after normalizing whitespace.
 
-Review tasks create a `.reports` folder in the project root when needed and write each report to a uniquely timestamped Markdown file there. The task terminal prints the report path. The PHP source file is not modified by review tasks.
+Review tasks create a `.reports` folder in the project root when needed and write each report to a uniquely timestamped Markdown file there. The task terminal prints the report path. The source files are not modified by review tasks. Whole-project review includes common source and configuration formats; it skips dependency, build, cache, report, and credential directories, lockfiles, symlinks, credential-like files, and files larger than 1 MiB. Files are sent to the configured Ollama endpoint in bounded batches, so review findings may not capture issues that depend on relationships between files in different batches. Only use a trusted endpoint.
 
 These are Zed Tasks rather than a traditional installable editor extension. Zed's extension API does not currently let extensions register arbitrary source-editor commands that can edit the active buffer. Tasks are the supported mechanism that provides access to `$ZED_FILE` and `$ZED_SELECTED_TEXT`.
 
