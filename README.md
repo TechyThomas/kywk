@@ -7,6 +7,7 @@ Generate PHPDoc comments for named PHP functions and methods, or request code re
 - **PHP Code Review (Ollama): Current File** asks for a review of the saved PHP file and writes a findings report without changing it.
 - **PHP Code Review (Ollama): Selection** reviews selected PHP code and writes a findings report without changing it.
 - **PHP Code Review (Ollama): Whole Project** reviews source and configuration files across the project in batches and writes one report.
+- **PHP Code Review (Ollama): Select Directory** prompts for a project-relative directory, reviews its source/configuration files, and writes one report.
 
 The runner uses only Python's standard library. It sends function code or reviewable project files to Ollama's `/api/chat` endpoint. Docblock tasks insert the returned comment into the file; review tasks write a Markdown report and leave source files unchanged. Existing adjacent PHPDoc comments are skipped.
 
@@ -47,6 +48,8 @@ Alternatively, use the script directly by pointing the task command to the Pytho
 Open the Command Palette, choose **task: spawn**, then select a PHP Docblocker or PHP Code Review task. Selection tasks only appear when text is selected. Tasks save the current buffer before running. Docblock selection mode requires a unique match in the saved file after normalizing whitespace.
 
 Review tasks create a `.reports` folder in the project root when needed and write each report to a uniquely timestamped Markdown file there. The task terminal prints the report path. The source files are not modified by review tasks. Whole-project review includes common source and configuration formats; it skips dependency, build, cache, report, and credential directories, lockfiles, symlinks, credential-like files, and files larger than 1 MiB. Files are sent to the configured Ollama endpoint in bounded batches, so review findings may not capture issues that depend on relationships between files in different batches. Only use a trusted endpoint.
+
+The **Select Directory** task lists project subdirectories in the task terminal and accepts either a listed number or a project-relative path. It only scans the chosen directory, while saving the timestamped report under the project root's `.reports` folder.
 
 Tasks reveal the integrated terminal while running. The runner shows a live spinner during each Ollama request, and whole-project reviews also report the current batch number.
 
