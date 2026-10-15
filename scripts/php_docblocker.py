@@ -7,6 +7,8 @@ import json
 import os
 import re
 import sys
+import threading
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -33,6 +35,45 @@ FUNCTION_RE = re.compile(
     r"\bfunction\s*&?\s*([A-Za-z_][A-Za-z0-9_]*)\s*\([^;{}]*\)\s*(?::\s*[^\s{;]+(?:\s*\|\s*[^\s{;]+)*)?\s*(?:\{|;)",
     re.MULTILINE,
 )
+
+
+def run_with_progress(label, operation):
+    """Show a live terminal spinner while waiting for an Ollama request."""
+    if not sys.stderr.isatty():
+        print("{}...".format(label), flush=True)
+        result = operation()
+        print("{} complete.".format(label), flush=True)
+        return result
+
+    stop = threading.Event()
+    frames = "|/-\\"
+    started = time.monotonic()
+
+    def animate():
+        index = 0
+        while not stop.wait(0.12):
+            sys.stderr.write("\r{} {}".format(label, frames[index % len(frames)]))
+            sys.stderr.flush()
+            index += 1
+
+    sys.stderr.write("{} ...".format(label))
+    sys.stderr.flush()
+    spinner = threading.Thread(target=animate)
+    spinner.daemon = True
+    spinner.start()
+    try:
+        result = operation()
+    except Exception:
+        stop.set()
+        spinner.join()
+        sys.stderr.write("\r{} failed after {:.1f}s.\n".format(label, time.monotonic() - started))
+        sys.stderr.flush()
+        raise
+    stop.set()
+    spinner.join()
+    sys.stderr.write("\r{} complete in {:.1f}s.\n".format(label, time.monotonic() - started))
+    sys.stderr.flush()
+    return result
 
 
 def load_config(config_path):
@@ -304,14 +345,23 @@ def process_source(source, config):
         raise RuntimeError("No named PHP functions or methods found")
     edits = []
     skipped = 0
+    pending = []
     for match in matches:
         start = declaration_start(source, match.start())
         if preceding_docblock(source, start):
             skipped += 1
             continue
+        pending.append((match, start))
+    for index, (match, start) in enumerate(pending, 1):
         end = function_end(source, match)
         function_source = source[start:end]
-        docblock = request_docblock(config, function_source, match.group(1))
+        label = "Generating docblock {}/{} for {}".format(
+            index, len(pending), match.group(1)
+        )
+        docblock = run_with_progress(
+            label,
+            lambda: request_docblock(config, function_source, match.group(1)),
+        )
         indent = indent_at(source, match.start())
         insertion = format_docblock(docblock, indent) + "\n"
         edits.append((start, insertion))
@@ -378,9 +428,15 @@ def _run():
         if not files:
             raise RuntimeError("No reviewable source or configuration files found in {}".format(project_root))
         batches = project_review_batches(files)
+        print("Found {} reviewable files; sending {} batch(es) to Ollama.".format(
+            len(files), len(batches)
+        ), flush=True)
         sections = []
         for batch_index, batch in enumerate(batches, 1):
-            result = request_project_review(config, batch, batch_index, len(batches)).strip()
+            result = run_with_progress(
+                "Reviewing project batch {}/{}".format(batch_index, len(batches)),
+                lambda: request_project_review(config, batch, batch_index, len(batches)),
+            ).strip()
             if result:
                 sections.append("## Review batch {} of {}\n\n{}".format(
                     batch_index, len(batches), result
@@ -406,7 +462,11 @@ def _run():
         review_source = source if selection is None else selection
         if not review_source.strip():
             raise RuntimeError("Select PHP code in the editor first")
-        report = request_review(config, review_source, path.name, selection is not None).strip()
+        review_label = "Reviewing selected code" if selection is not None else "Reviewing {}".format(path.name)
+        report = run_with_progress(
+            review_label,
+            lambda: request_review(config, review_source, path.name, selection is not None),
+        ).strip()
         if not report:
             raise RuntimeError("Ollama returned an empty review report")
         scope = "selected code" if selection is not None else "entire file"
