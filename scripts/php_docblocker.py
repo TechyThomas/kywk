@@ -7,6 +7,7 @@ import json
 import os
 import re
 import sys
+import subprocess
 import threading
 import time
 import urllib.error
@@ -31,6 +32,8 @@ PROJECT_REVIEW_IGNORED_FILES = {
     "pnpm-lock.yaml", "bun.lock", "bun.lockb",
 }
 PROJECT_REVIEW_BATCH_CHARS = 12000
+COMMIT_SUMMARY_BATCH_CHARS = 12000
+COMMIT_DIFF_MAX_CHARS = 10000
 FUNCTION_RE = re.compile(
     r"\bfunction\s*&?\s*([A-Za-z_][A-Za-z0-9_]*)\s*\([^;{}]*\)\s*(?::\s*[^\s{;]+(?:\s*\|\s*[^\s{;]+)*)?\s*(?:\{|;)",
     re.MULTILINE,
@@ -292,6 +295,148 @@ def request_project_review(config, batch, batch_index, batch_count, scope="proje
     )
 
 
+def git_output(project_root, *args):
+    result = subprocess.run(
+        ["git", "-C", str(project_root)] + list(args),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError("Git command failed: {}".format(result.stderr.strip()))
+    return result.stdout
+
+
+def git_config_value(project_root, key):
+    result = subprocess.run(
+        ["git", "-C", str(project_root), "config", "--get", key],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+    )
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
+def collect_daily_commits(project_root, today):
+    author_name = git_config_value(project_root, "user.name") or os.environ.get("GIT_AUTHOR_NAME", "")
+    author_email = git_config_value(project_root, "user.email") or os.environ.get("GIT_AUTHOR_EMAIL", "")
+    if not author_name and not author_email:
+        raise RuntimeError("Set git user.name or user.email to identify your commits")
+
+    format_string = "%H%x00%an%x00%ae%x00%aI%x00%s%x00%b%x1e"
+    log_output = git_output(project_root, "log", "--all", "--format=" + format_string)
+    matches = []
+    for record in log_output.split("\x1e"):
+        record = record.strip("\r\n")
+        if not record:
+            continue
+        fields = record.split("\x00", 5)
+        if len(fields) != 6:
+            continue
+        commit_hash, name, email, authored_at, subject, body = fields
+        try:
+            commit_date = datetime.fromisoformat(authored_at).astimezone().date()
+        except ValueError:
+            continue
+        same_author = (
+            email.casefold() == author_email.casefold()
+            if author_email
+            else name.casefold() == author_name.casefold()
+        )
+        if commit_date != today or not same_author:
+            continue
+        diff = git_output(
+            project_root,
+            "show", "--format=", "--stat", "--patch", "--no-ext-diff", "--unified=2", commit_hash, "--",
+        )
+        if len(diff) > COMMIT_DIFF_MAX_CHARS:
+            diff = diff[:COMMIT_DIFF_MAX_CHARS] + "\n[Diff truncated for report size.]"
+        commit_text = (
+            "Commit: {}\nAuthor: {} <{}>\nAuthored: {}\nSubject: {}\n{}\nDiff and file summary:\n{}"
+        ).format(commit_hash[:12], name, email, authored_at, subject, body.strip(), diff.strip())
+        matches.append((authored_at, commit_hash, subject, commit_text))
+    matches.sort(key=lambda item: item[0])
+    return author_name, author_email, matches
+
+
+def commit_summary_batches(commits, max_chars=COMMIT_SUMMARY_BATCH_CHARS):
+    batches = []
+    current = []
+    size = 0
+    for _, _, _, commit_text in commits:
+        if current and size + len(commit_text) + 2 > max_chars:
+            batches.append("\n\n".join(current))
+            current = []
+            size = 0
+        current.append(commit_text)
+        size += len(commit_text) + 2
+    if current:
+        batches.append("\n\n".join(current))
+    return batches
+
+
+def request_commit_summary(config, batch, date_label, author, batch_index, batch_count):
+    prompt = (
+        "Create a concise daily engineering summary in Markdown for this developer's Git commits. "
+        "Group related work, explain what changed and why based only on commit messages and diffs, and "
+        "call out important fixes or performance work. Include short commit hashes and subjects in a "
+        "compact 'Commits covered' list. Do not invent intent or claim tests passed unless the commit "
+        "data says so. This is batch {} of {} for {}. Author: {}.\n\n{}"
+    ).format(batch_index, batch_count, date_label, author, batch)
+    return ollama_chat(
+        config,
+        "You write accurate, readable daily engineering summaries from Git commit data. Return Markdown only.",
+        prompt,
+    )
+
+
+def summarize_daily_commits(config, project_root):
+    today = datetime.now().astimezone().date()
+    author_name, author_email, commits = collect_daily_commits(project_root, today)
+    author_label = author_name or author_email
+    if author_name and author_email:
+        author_label = "{} <{}>".format(author_name, author_email)
+    date_label = today.isoformat()
+    if not commits:
+        markdown = (
+            "# Daily Git Commit Summary — {}\n\n"
+            "No commits authored by **{}** were found for this date in this repository.\n"
+        ).format(date_label, author_label)
+        write_report(project_root, "daily-commit-summary", markdown)
+        return
+
+    batches = commit_summary_batches(commits)
+    print("Found {} commit(s) by {}; summarizing {} batch(es) with Ollama.".format(
+        len(commits), author_label, len(batches)
+    ), flush=True)
+    summaries = []
+    for batch_index, batch in enumerate(batches, 1):
+        summary = run_with_progress(
+            "Summarizing commit batch {}/{}".format(batch_index, len(batches)),
+            lambda: request_commit_summary(
+                config, batch, date_label, author_label, batch_index, len(batches)
+            ),
+        ).strip()
+        if summary:
+            summaries.append("## Summary batch {} of {}\n\n{}".format(
+                batch_index, len(batches), summary
+            ))
+    if not summaries:
+        raise RuntimeError("Ollama returned an empty commit summary")
+    commit_list = "\n".join(
+        "- `{}` — {} ({})".format(
+            commit_hash[:12], subject, datetime.fromisoformat(authored_at).astimezone().strftime("%H:%M")
+        )
+        for authored_at, commit_hash, subject, _ in commits
+    )
+    markdown = (
+        "# Daily Git Commit Summary — {}\n\n"
+        "**Author:** {}  \n**Project:** `{}`  \n**Commits:** {}\n\n"
+        "## Commits\n\n{}\n\n{}\n"
+    ).format(date_label, author_label, project_root, len(commits), commit_list, "\n\n".join(summaries))
+    write_report(project_root, "daily-commit-summary", markdown)
+
+
 def write_report(project_root, report_name, markdown):
     if not project_root.is_dir():
         raise RuntimeError("Project root does not exist: {}".format(project_root))
@@ -443,6 +588,7 @@ def _run():
     parser.add_argument("--review", action="store_true", help="Review code and write a Markdown report without changing source")
     parser.add_argument("--review-project", action="store_true", help="Review project source/config files and write a Markdown report")
     parser.add_argument("--review-directory", action="store_true", help="Prompt for a project directory to review")
+    parser.add_argument("--summarize-daily-commits", action="store_true", help="Summarize today's Git commits and write a Markdown report")
     parser.add_argument("--project-root", type=Path, help="Project root for --review-project")
     parser.add_argument("--report-dir", type=Path, help="Directory in which to write a Markdown review report")
     parser.add_argument("--selection", help="Exact selected source from Zed")
@@ -454,11 +600,19 @@ def _run():
     args = parser.parse_args()
     if args.selection is not None and args.selection_stdin:
         raise RuntimeError("Use either --selection or --selection-stdin, not both")
-    if sum((args.review, args.review_project, args.review_directory)) > 1:
-        raise RuntimeError("Choose only one review mode")
-    if (args.review_project or args.review_directory) and (args.selection is not None or args.selection_stdin):
-        raise RuntimeError("Project and directory reviews cannot be combined with a selection")
+    if sum((args.review, args.review_project, args.review_directory, args.summarize_daily_commits)) > 1:
+        raise RuntimeError("Choose only one review or summary mode")
+    if (args.review_project or args.review_directory or args.summarize_daily_commits) and (
+        args.selection is not None or args.selection_stdin
+    ):
+        raise RuntimeError("Project review and commit summary modes cannot be combined with a selection")
     config = load_config(args.config)
+    if args.summarize_daily_commits:
+        project_root = (args.project_root or Path.cwd()).resolve()
+        if not project_root.is_dir():
+            raise RuntimeError("Project root does not exist: {}".format(project_root))
+        summarize_daily_commits(config, project_root)
+        return
     if args.review_project or args.review_directory:
         project_root = args.project_root or Path.cwd()
         if not project_root.is_dir():
@@ -502,7 +656,7 @@ def _run():
         write_report(project_root, report_name, markdown)
         return
     if not args.file:
-        raise RuntimeError("--file is required unless --review-project is used")
+        raise RuntimeError("--file is required unless a project-level task is selected")
     path = Path(args.file)
     if path.suffix.lower() != ".php":
         raise RuntimeError("The active file must have a .php extension")
