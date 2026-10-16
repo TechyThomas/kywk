@@ -9,6 +9,7 @@ Generate PHPDoc comments for named PHP functions and methods, or request code re
 - **PHP Code Review (Ollama): Whole Project** reviews source and configuration files across the project in batches and writes one report.
 - **PHP Code Review (Ollama): Select Directory** prompts for a project-relative directory, reviews its source/configuration files, and writes one report.
 - **Git Summary (Ollama): Today's Commits** summarizes commits authored today in the project and writes a Markdown report.
+- **Git Summary (Ollama): Commits on Date** prompts for a date in `YYYY-MM-DD` format and summarizes commits authored on that date.
 - **Git Commit (Ollama): Review Message & Confirm** generates a message from current project changes and creates a commit only after confirmation.
 
 The runner uses only Python's standard library. It sends function code or reviewable project files to Ollama's `/api/chat` endpoint. Docblock tasks insert the returned comment into the file; review tasks write a Markdown report and leave source files unchanged. Existing adjacent PHPDoc comments are skipped.
@@ -52,6 +53,8 @@ Open the Command Palette, choose **task: spawn**, then select a PHP Docblocker o
 Review tasks create a `.reports` folder in the project root when needed and write each report to a uniquely timestamped Markdown file there. The task terminal prints the report path. The source files are not modified by review tasks. Whole-project review includes common source and configuration formats; it skips dependency, build, cache, report, and credential directories, lockfiles, symlinks, credential-like files, and files larger than 1 MiB. Files are sent to the configured Ollama endpoint in bounded batches, so review findings may not capture issues that depend on relationships between files in different batches. Only use a trusted endpoint.
 
 The daily commit summary uses the machine's local date and the repository's configured Git author email (or name when no email is configured) to identify your commits. It searches commits reachable from Git refs, includes their messages and diffs in the Ollama request, and writes a timestamped `.reports/daily-commit-summary-*.md` file. It creates a report even when no matching commits are found. Large diffs are truncated before sending; large days are summarized in separate batches.
+
+The **Commits on Date** task uses the same author matching and report format, after prompting for a valid calendar date in `YYYY-MM-DD` format. It writes a timestamped Markdown report under `.reports`.
 
 The Git commit task sends the current tracked changes and untracked, non-ignored files to Ollama to propose a commit title and description. It displays both and waits for `y` to confirm, `e` to replace the title and description, or `n` to cancel. After confirmation, it stages all current project changes and runs `git commit`. It checks that the change set stayed the same while awaiting confirmation; if it changed, the task stops without committing. The model receives project diffs, so use a trusted Ollama endpoint.
 

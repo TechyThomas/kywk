@@ -512,19 +512,35 @@ def confirm_and_create_commit(config, project_root):
         raise RuntimeError("Git could not create the commit (exit code {})".format(result.returncode))
 
 
-def summarize_daily_commits(config, project_root):
-    today = datetime.now().astimezone().date()
-    author_name, author_email, commits = collect_daily_commits(project_root, today)
+def prompt_for_commit_date():
+    while True:
+        try:
+            value = input("Enter the commit date (YYYY-MM-DD), or q to cancel: ").strip()
+        except EOFError:
+            raise RuntimeError("No date was entered")
+        if value.casefold() in ("q", "quit", "cancel"):
+            return None
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+            try:
+                return datetime.strptime(value, "%Y-%m-%d").date()
+            except ValueError:
+                pass
+        print("Enter a valid calendar date in YYYY-MM-DD format, or q to cancel.", flush=True)
+
+
+def summarize_commits_for_date(config, project_root, target_date):
+    author_name, author_email, commits = collect_daily_commits(project_root, target_date)
     author_label = author_name or author_email
     if author_name and author_email:
         author_label = "{} <{}>".format(author_name, author_email)
-    date_label = today.isoformat()
+    date_label = target_date.isoformat()
+    report_name = "daily-commit-summary" if target_date == datetime.now().astimezone().date() else "commit-summary-{}".format(date_label)
     if not commits:
         markdown = (
-            "# Daily Git Commit Summary — {}\n\n"
+            "# Git Commit Summary — {}\n\n"
             "No commits authored by **{}** were found for this date in this repository.\n"
         ).format(date_label, author_label)
-        write_report(project_root, "daily-commit-summary", markdown)
+        write_report(project_root, report_name, markdown)
         return
 
     batches = commit_summary_batches(commits)
@@ -552,11 +568,15 @@ def summarize_daily_commits(config, project_root):
         for authored_at, commit_hash, subject, _ in commits
     )
     markdown = (
-        "# Daily Git Commit Summary — {}\n\n"
+        "# Git Commit Summary — {}\n\n"
         "**Author:** {}  \n**Project:** `{}`  \n**Commits:** {}\n\n"
         "## Commits\n\n{}\n\n{}\n"
     ).format(date_label, author_label, project_root, len(commits), commit_list, "\n\n".join(summaries))
-    write_report(project_root, "daily-commit-summary", markdown)
+    write_report(project_root, report_name, markdown)
+
+
+def summarize_daily_commits(config, project_root):
+    summarize_commits_for_date(config, project_root, datetime.now().astimezone().date())
 
 
 def write_report(project_root, report_name, markdown):
@@ -711,6 +731,7 @@ def _run():
     parser.add_argument("--review-project", action="store_true", help="Review project source/config files and write a Markdown report")
     parser.add_argument("--review-directory", action="store_true", help="Prompt for a project directory to review")
     parser.add_argument("--summarize-daily-commits", action="store_true", help="Summarize today's Git commits and write a Markdown report")
+    parser.add_argument("--summarize-commits-on-date", action="store_true", help="Prompt for a date and summarize commits authored on it")
     parser.add_argument("--create-commit", action="store_true", help="Generate a commit message, ask for confirmation, then commit project changes")
     parser.add_argument("--project-root", type=Path, help="Project root for project-level tasks")
     parser.add_argument("--report-dir", type=Path, help="Directory in which to write a Markdown review report")
@@ -723,9 +744,9 @@ def _run():
     args = parser.parse_args()
     if args.selection is not None and args.selection_stdin:
         raise RuntimeError("Use either --selection or --selection-stdin, not both")
-    if sum((args.review, args.review_project, args.review_directory, args.summarize_daily_commits, args.create_commit)) > 1:
+    if sum((args.review, args.review_project, args.review_directory, args.summarize_daily_commits, args.summarize_commits_on_date, args.create_commit)) > 1:
         raise RuntimeError("Choose only one task mode")
-    if (args.review_project or args.review_directory or args.summarize_daily_commits or args.create_commit) and (
+    if (args.review_project or args.review_directory or args.summarize_daily_commits or args.summarize_commits_on_date or args.create_commit) and (
         args.selection is not None or args.selection_stdin
     ):
         raise RuntimeError("Project-level tasks cannot be combined with a selection")
@@ -735,6 +756,16 @@ def _run():
         if not project_root.is_dir():
             raise RuntimeError("Project root does not exist: {}".format(project_root))
         summarize_daily_commits(config, project_root)
+        return
+    if args.summarize_commits_on_date:
+        project_root = (args.project_root or Path.cwd()).resolve()
+        if not project_root.is_dir():
+            raise RuntimeError("Project root does not exist: {}".format(project_root))
+        target_date = prompt_for_commit_date()
+        if target_date is not None:
+            summarize_commits_for_date(config, project_root, target_date)
+        else:
+            print("Cancelled; no report was created.", flush=True)
         return
     if args.create_commit:
         project_root = (args.project_root or Path.cwd()).resolve()
