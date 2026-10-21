@@ -40,13 +40,13 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install build tool
-        run: python -m pip install pyinstaller
+        run: python -m pip install pyinstaller certifi
       - name: Build executables
         shell: bash
         run: |
-          python -m PyInstaller --clean --onefile --name kywk scripts/kywk.py
-          python -m PyInstaller --clean --onefile --name kywk-php scripts/kywk_php.py
-          python -m PyInstaller --clean --onefile --name kywk-git scripts/kywk_git.py
+          python -m PyInstaller --clean --onefile --collect-data certifi --name kywk scripts/kywk.py
+          python -m PyInstaller --clean --onefile --collect-data certifi --name kywk-php scripts/kywk_php.py
+          python -m PyInstaller --clean --onefile --collect-data certifi --name kywk-git scripts/kywk_git.py
       - name: Package binaries
         shell: bash
         run: |
