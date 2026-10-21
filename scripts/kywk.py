@@ -111,7 +111,8 @@ def _update():
     windows = platform.system() == "Windows"
     suffix = ".exe" if windows else ""
     tag, archive_data = _download_latest_release()
-    staging = Path(tempfile.mkdtemp(prefix="kywk-update-"))
+    # Stage on the same filesystem as the installed binaries so os.replace stays atomic.
+    staging = Path(tempfile.mkdtemp(prefix=".kywk-update-", dir=str(install_dir)))
     try:
         expected = _extract_release(archive_data, staging, windows)
         targets = [install_dir / name for name in expected]
@@ -181,7 +182,14 @@ def main():
             return 1
 
     executable = "kywk-php" if args.php else "kywk-git"
-    path = shutil.which(executable)
+    path = None
+    if getattr(sys, "frozen", False):
+        suffix = ".exe" if platform.system() == "Windows" else ""
+        sibling = Path(sys.executable).resolve().parent / (executable + suffix)
+        if sibling.is_file():
+            path = str(sibling)
+    if path is None:
+        path = shutil.which(executable)
     if path is None:
         print("kywk: required executable {!r} was not found on PATH".format(executable), file=sys.stderr)
         return 127
