@@ -10,9 +10,9 @@ requires-python = ">=3.9"
 
 [project.scripts]
 kywk = "kywk:main"
-kywk-php = "php_docblocker:main_php"
-kywk-git = "php_docblocker:main_git"
+kywk-php = "kywk_tasks:main_php"
+kywk-git = "kywk_tasks:main_git"
 
 [tool.setuptools]
-py-modules = ["php_docblocker", "kywk"]
+py-modules = ["kywk_tasks", "kywk"]
 package-dir = {"" = "scripts"}
