@@ -724,7 +724,21 @@ def process_selection(source, selection, config):
     return source[:start] + updated + source[end:], added, skipped
 
 
-def _run():
+GIT_TASK_FLAGS = {
+    "--summarize-daily-commits",
+    "--summarize-commits-on-date",
+    "--create-commit",
+}
+
+
+def _run(task_group=None):
+    if task_group is not None:
+        forbidden = GIT_TASK_FLAGS if task_group == "php" else {
+            "--review", "--review-project", "--review-directory",
+            "--file", "--selection", "--selection-stdin",
+        }
+        if any(argument in forbidden for argument in sys.argv[1:]):
+            raise RuntimeError("This executable only supports {} tasks".format(task_group.upper()))
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--file", help="PHP file to review or update")
     parser.add_argument("--review", action="store_true", help="Review code and write a Markdown report without changing source")
@@ -850,10 +864,23 @@ def _run():
 
 
 def main():
+    return _main_for(None)
+
+
+def main_php():
+    return _main_for("php")
+
+
+def main_git():
+    return _main_for("git")
+
+
+def _main_for(task_group):
     try:
-        _run()
+        _run(task_group)
     except (OSError, RuntimeError, ValueError) as error:
-        print("php-docblocker: {}".format(error), file=sys.stderr)
+        executable = "kywk-{}".format(task_group) if task_group else "kywk"
+        print("{}: {}".format(executable, error), file=sys.stderr)
         return 1
     return 0
 

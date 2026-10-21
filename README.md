@@ -4,7 +4,9 @@
 
 “Kywk” is a fun spelling of “Quick.” The project is about getting mundane development tasks done quicker, so you can spend more time on the work that matters.
 
-Generate PHPDoc comments for named PHP functions and methods, or request code reviews, using an Ollama model. Zed exposes the current file, selected text, and project root through its task system, so this project provides these tasks:
+Kywk provides three commands: `kywk` dispatches to `kywk-php` or `kywk-git`, `kywk-php` provides PHP docblock and review tasks, and `kywk-git` provides Git summary and commit tasks. Use either task executable independently; both task groups use an Ollama model, and Zed exposes the current file, selected text, and project root through its task system.
+
+The PHP tasks are:
 
 - **PHP Docblocker: Current File** adds docblocks to named functions and methods in the saved PHP file.
 - **PHP Docblocker: Selection** adds docblocks to named functions and methods in the selected code.
@@ -12,6 +14,9 @@ Generate PHPDoc comments for named PHP functions and methods, or request code re
 - **PHP Code Review (Ollama): Selection** reviews selected PHP code and writes a findings report without changing it.
 - **PHP Code Review (Ollama): Whole Project** reviews source and configuration files across the project in batches and writes one report.
 - **PHP Code Review (Ollama): Select Directory** prompts for a project-relative directory, reviews its source/configuration files, and writes one report.
+
+The Git tasks are:
+
 - **Git Summary (Ollama): Today's Commits** summarizes commits authored today in the project and writes a Markdown report.
 - **Git Summary (Ollama): Commits on Date** prompts for a date in `YYYY-MM-DD` format and summarizes commits authored on that date.
 - **Git Commit (Ollama): Review Message & Confirm** generates a message from current project changes and creates a commit only after confirmation.
@@ -40,15 +45,22 @@ Environment variables override the config file:
 
 ## Install the task runner
 
-Install the project as a user command:
+Install the project as user commands. This creates `kywk`, `kywk-php`, and `kywk-git`:
 
 ```sh
 python3 -m pip install --user .
 ```
 
-Ensure the install location for user scripts is on `PATH` in Zed's environment. Then copy the task definitions from [`.zed/tasks.json`](.zed/tasks.json) into your PHP project's `.zed/tasks.json`.
+Ensure the install location for user scripts is on `PATH` in Zed's environment. Copy the task definitions from [`.zed/tasks.json`](.zed/tasks.json) into any project's `.zed/tasks.json`. PHP tasks invoke `kywk-php`; Git tasks invoke `kywk-git`, so you can use the task group you need.
 
-Alternatively, use the script directly by pointing the task command to the Python interpreter and the full path to `scripts/php_docblocker.py`.
+The dispatcher forwards every argument after `--php` or `--git` to the selected executable:
+
+```sh
+kywk --php --file ./src/example.php
+kywk --git --summarize-daily-commits --project-root .
+```
+
+You can also call `kywk-php` or `kywk-git` directly. The dispatcher reports an error if its selected executable is not installed.
 
 ## Run in Zed
 

@@ -3,14 +3,16 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "php-docblocker"
+name = "kywk"
 version = "0.1.0"
-description = "Generate PHP function docblocks with Ollama from Zed tasks"
+description = "Optional PHP and Git task executables for Zed"
 requires-python = ">=3.9"
 
 [project.scripts]
-php-docblocker = "php_docblocker:main"
+kywk = "kywk:main"
+kywk-php = "php_docblocker:main_php"
+kywk-git = "php_docblocker:main_git"
 
 [tool.setuptools]
-py-modules = ["php_docblocker"]
+py-modules = ["php_docblocker", "kywk"]
 package-dir = {"" = "scripts"}

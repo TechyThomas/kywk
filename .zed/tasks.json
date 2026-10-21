@@ -1,7 +1,7 @@
 [
   {
     "label": "PHP Docblocker: Current File",
-    "command": "php-docblocker",
+    "command": "kywk-php",
     "args": [
       "--file",
       "$ZED_FILE"
@@ -15,7 +15,7 @@
   },
   {
     "label": "PHP Docblocker: Selection",
-    "command": "php-docblocker --file \"$ZED_FILE\" --selection-stdin <<'__PHP_DOCBLOCKER_SELECTION_29C9E6B4__'\n$ZED_SELECTED_TEXT\n__PHP_DOCBLOCKER_SELECTION_29C9E6B4__",
+    "command": "kywk-php --file \"$ZED_FILE\" --selection-stdin <<'__PHP_DOCBLOCKER_SELECTION_29C9E6B4__'\n$ZED_SELECTED_TEXT\n__PHP_DOCBLOCKER_SELECTION_29C9E6B4__",
     "cwd": "$ZED_WORKTREE_ROOT",
     "use_new_terminal": false,
     "allow_concurrent_runs": false,
@@ -25,7 +25,7 @@
   },
   {
     "label": "PHP Code Review (Ollama): Current File",
-    "command": "php-docblocker",
+    "command": "kywk-php",
     "args": [
       "--review",
       "--file",
@@ -42,7 +42,7 @@
   },
   {
     "label": "PHP Code Review (Ollama): Selection",
-    "command": "php-docblocker --review --file \"$ZED_FILE\" --report-dir \"$ZED_WORKTREE_ROOT\" --selection-stdin <<'__PHP_DOCBLOCKER_REVIEW_74AC19E2__'\n$ZED_SELECTED_TEXT\n__PHP_DOCBLOCKER_REVIEW_74AC19E2__",
+    "command": "kywk-php --review --file \"$ZED_FILE\" --report-dir \"$ZED_WORKTREE_ROOT\" --selection-stdin <<'__PHP_DOCBLOCKER_REVIEW_74AC19E2__'\n$ZED_SELECTED_TEXT\n__PHP_DOCBLOCKER_REVIEW_74AC19E2__",
     "cwd": "$ZED_WORKTREE_ROOT",
     "use_new_terminal": false,
     "allow_concurrent_runs": false,
@@ -52,7 +52,7 @@
   },
   {
     "label": "PHP Code Review (Ollama): Whole Project",
-    "command": "php-docblocker",
+    "command": "kywk-php",
     "args": [
       "--review-project",
       "--project-root",
@@ -67,7 +67,7 @@
   },
   {
     "label": "PHP Code Review (Ollama): Select Directory",
-    "command": "php-docblocker",
+    "command": "kywk-php",
     "args": [
       "--review-directory",
       "--project-root",
@@ -82,7 +82,7 @@
   },
   {
     "label": "Git Summary (Ollama): Today's Commits",
-    "command": "php-docblocker",
+    "command": "kywk-git",
     "args": [
       "--summarize-daily-commits",
       "--project-root",
@@ -97,7 +97,7 @@
   },
   {
     "label": "Git Summary (Ollama): Commits on Date",
-    "command": "php-docblocker",
+    "command": "kywk-git",
     "args": [
       "--summarize-commits-on-date",
       "--project-root",
@@ -112,7 +112,7 @@
   },
   {
     "label": "Git Commit (Ollama): Review Message & Confirm",
-    "command": "php-docblocker",
+    "command": "kywk-git",
     "args": [
       "--create-commit",
       "--project-root",
