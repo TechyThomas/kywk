@@ -51,7 +51,11 @@ Release archives are built separately for Windows, macOS, and Linux, each with x
 
 To update an installed release, run `kywk --update`. It downloads the latest release for the current operating system and architecture and updates all three Kywk executables in the same directory. Keep the three executables together and make sure that directory is writable. On Windows, the replacement finishes shortly after the running `kywk` process exits. Binaries that predate the updater must first be replaced manually with the latest archive from GitHub Releases. The updater verifies GitHub's HTTPS certificates using system roots and a bundled public CA bundle. On managed networks, set `SSL_CERT_FILE` to a PEM file containing your organization's trusted CA certificate if needed.
 
-Kywk sends requests to an Ollama server. Install Ollama separately and make sure the configured server is running and reachable; the default is `http://localhost:11434`. A PHP interpreter is not required to use the PHP source editing and review tasks. Git must be installed for the Git tasks. Release binaries are currently unsigned, so Windows, macOS, or Linux security settings may display a warning when you first run one.
+Kywk sends requests to an Ollama server. Install Ollama separately and make sure the configured server is running and reachable; the default is `http://localhost:11434`. A PHP interpreter is not required to use the PHP source editing and review tasks. Git must be installed for the Git tasks. Release binaries are currently unsigned and may trigger a security warning on first run.
+
+### macOS first run
+
+The macOS binaries are not signed or notarized, so Gatekeeper may block them. If you trust the downloaded release, try running the blocked executable once, then open **System Settings → Privacy & Security**, scroll to **Security**, and select **Open Anyway** for Kywk. Confirm the prompt and run it again. Repeat for `kywk-php` or `kywk-git` if macOS blocks either executable separately. See [Apple's instructions for opening an app by overriding security settings](https://support.apple.com/en-gb/guide/mac-help/mh40617/27/mac/27).
 
 To use a release from a source checkout instead, install Python 3.9 or newer and run `python -m pip install --user .` from the repository root. This project has no third-party Python runtime dependencies.
 
