@@ -49,6 +49,8 @@ Download the archive for your operating system and CPU architecture from the pro
 
 Release archives are built separately for Windows, macOS, and Linux, each with x86_64 and ARM64 (AArch64) binaries. Choose the archive matching both your operating system and CPU architecture; binaries are not interchangeable between operating systems or architectures. Linux binaries are built on Ubuntu and may require a reasonably current glibc. The releases bundle the Python runtime and Kywk scripts, so Python and pip do not need to be installed.
 
+To update an installed release, run `kywk --update`. It downloads the latest release for the current operating system and architecture and updates all three Kywk executables in the same directory. Keep the three executables together and make sure that directory is writable. On Windows, the replacement finishes shortly after the running `kywk` process exits. Binaries that predate the updater must first be replaced manually with the latest archive from GitHub Releases.
+
 Kywk sends requests to an Ollama server. Install Ollama separately and make sure the configured server is running and reachable; the default is `http://localhost:11434`. A PHP interpreter is not required to use the PHP source editing and review tasks. Git must be installed for the Git tasks. Release binaries are currently unsigned, so Windows, macOS, or Linux security settings may display a warning when you first run one.
 
 To use a release from a source checkout instead, install Python 3.9 or newer and run `python -m pip install --user .` from the repository root. This project has no third-party Python runtime dependencies.
