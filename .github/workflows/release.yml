@@ -1,0 +1,76 @@
+name: Build release binaries
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.asset }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            asset: kywk-windows-x86_64.zip
+            suffix: .exe
+          - runner: windows-11-arm
+            asset: kywk-windows-aarch64.zip
+            suffix: .exe
+          - runner: macos-15-intel
+            asset: kywk-macos-x86_64.zip
+            suffix: ""
+          - runner: macos-latest
+            asset: kywk-macos-aarch64.zip
+            suffix: ""
+          - runner: ubuntu-latest
+            asset: kywk-linux-x86_64.zip
+            suffix: ""
+          - runner: ubuntu-24.04-arm
+            asset: kywk-linux-aarch64.zip
+            suffix: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install build tool
+        run: python -m pip install pyinstaller
+      - name: Build executables
+        shell: bash
+        run: |
+          python -m PyInstaller --clean --onefile --name kywk scripts/kywk.py
+          python -m PyInstaller --clean --onefile --name kywk-php scripts/kywk_php.py
+          python -m PyInstaller --clean --onefile --name kywk-git scripts/kywk_git.py
+      - name: Package binaries
+        shell: bash
+        run: |
+          mkdir -p package
+          cp dist/kywk${{ matrix.suffix }} dist/kywk-php${{ matrix.suffix }} dist/kywk-git${{ matrix.suffix }} package/
+          cd package
+          python -c "import zipfile; z=zipfile.ZipFile('../${{ matrix.asset }}', 'w', zipfile.ZIP_DEFLATED); [z.write(p) for p in ('kywk${{ matrix.suffix }}', 'kywk-php${{ matrix.suffix }}', 'kywk-git${{ matrix.suffix }}')]; z.close()"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: ${{ matrix.asset }}
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" release-assets/* --generate-notes

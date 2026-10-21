@@ -45,13 +45,13 @@ Environment variables override the config file:
 
 ## Install the task runner
 
-Install the project as user commands. This creates `kywk`, `kywk-php`, and `kywk-git`:
+Download the archive for your operating system and CPU architecture from the project's [GitHub Releases](https://github.com/TechyThomas/kywk/releases) page, then extract it. Each archive contains the three ready-to-run executables: `kywk` (the dispatcher), `kywk-php`, and `kywk-git`. Put the extracted directory on `PATH` so Zed can find all three commands. Copy the task definitions from [`.zed/tasks.json`](.zed/tasks.json) into any project's `.zed/tasks.json`.
 
-```sh
-python3 -m pip install --user .
-```
+Release archives are built separately for Windows, macOS, and Linux, each with x86_64 and ARM64 (AArch64) binaries. Choose the archive matching both your operating system and CPU architecture; binaries are not interchangeable between operating systems or architectures. Linux binaries are built on Ubuntu and may require a reasonably current glibc. The releases bundle the Python runtime and Kywk scripts, so Python and pip do not need to be installed.
 
-Ensure the install location for user scripts is on `PATH` in Zed's environment. Copy the task definitions from [`.zed/tasks.json`](.zed/tasks.json) into any project's `.zed/tasks.json`. PHP tasks invoke `kywk-php`; Git tasks invoke `kywk-git`, so you can use the task group you need.
+Kywk sends requests to an Ollama server. Install Ollama separately and make sure the configured server is running and reachable; the default is `http://localhost:11434`. A PHP interpreter is not required to use the PHP source editing and review tasks. Git must be installed for the Git tasks. Release binaries are currently unsigned, so Windows, macOS, or Linux security settings may display a warning when you first run one.
+
+To use a release from a source checkout instead, install Python 3.9 or newer and run `python -m pip install --user .` from the repository root. This project has no third-party Python runtime dependencies.
 
 The dispatcher forwards every argument after `--php` or `--git` to the selected executable:
 
