@@ -1,4 +1,4 @@
-# PHP Docblocker for Zed + Ollama
+# Kywk - Dev tools for Zed + Ollama
 
 Generate PHPDoc comments for named PHP functions and methods, or request code reviews, using an Ollama model. Zed exposes the current file, selected text, and project root through its task system, so this project provides these tasks:
 
