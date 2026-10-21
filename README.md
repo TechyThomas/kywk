@@ -1,5 +1,9 @@
 # Kywk - Dev tools for Zed + Ollama
 
+## What does “Kywk” mean?
+
+“Kywk” is a fun spelling of “Quick.” The project is about getting mundane development tasks done quicker, so you can spend more time on the work that matters.
+
 Generate PHPDoc comments for named PHP functions and methods, or request code reviews, using an Ollama model. Zed exposes the current file, selected text, and project root through its task system, so this project provides these tasks:
 
 - **PHP Docblocker: Current File** adds docblocks to named functions and methods in the saved PHP file.
