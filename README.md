@@ -57,6 +57,8 @@ Kywk sends requests to an Ollama server. Install Ollama separately and make sure
 
 The macOS binaries are not signed or notarized, so Gatekeeper may block them. If you trust the downloaded release, try running the blocked executable once, then open **System Settings → Privacy & Security**, scroll to **Security**, and select **Open Anyway** for Kywk. Confirm the prompt and run it again. Repeat for `kywk-php` or `kywk-git` if macOS blocks either executable separately. See [Apple's instructions for opening an app by overriding security settings](https://support.apple.com/en-gb/guide/mac-help/mh40617/27/mac/27).
 
+## Installing from source
+
 To use a release from a source checkout instead, install Python 3.9 or newer and run `python -m pip install --user .` from the repository root. This project has no third-party Python runtime dependencies.
 
 The dispatcher forwards every argument after `--php` or `--git` to the selected executable:
