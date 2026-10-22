@@ -25,7 +25,7 @@ The runner uses only Python's standard library. It sends function code or review
 
 ## Configure Ollama
 
-Create `~/.config/php-docblocker/config.json`:
+Create `~/.config/kywk/config.json`:
 
 ```json
 {

@@ -16,7 +16,7 @@ import urllib.request
 from pathlib import Path
 
 
-DEFAULT_CONFIG = Path.home() / ".config" / "php-docblocker" / "config.json"
+DEFAULT_CONFIG = Path.home() / ".config" / "kywk" / "config.json"
 PROJECT_REVIEW_EXTENSIONS = {
     ".php", ".phtml", ".inc", ".js", ".jsx", ".ts", ".tsx", ".json",
     ".yaml", ".yml", ".xml", ".neon", ".ini", ".toml", ".sql", ".sh",
