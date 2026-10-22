@@ -6,7 +6,6 @@ import json
 import os
 import platform
 import shutil
-import ssl
 import stat
 import subprocess
 import sys
@@ -15,25 +14,11 @@ import urllib.error
 import urllib.request
 import zipfile
 from pathlib import Path
+from kywk_ssl import create_https_context
 
 
 REPOSITORY = "TechyThomas/kywk"
 EXECUTABLES = ("kywk", "kywk-php", "kywk-git")
-
-
-def _https_context():
-    """Combine system trust roots with bundled roots and any user-provided CA."""
-    context = ssl.create_default_context()
-    try:
-        import certifi
-    except ImportError:
-        certifi = None
-    if certifi is not None:
-        context.load_verify_locations(cafile=certifi.where())
-    custom_ca = os.environ.get("SSL_CERT_FILE")
-    if custom_ca:
-        context.load_verify_locations(cafile=custom_ca)
-    return context
 
 
 def _release_asset_name():
@@ -64,7 +49,7 @@ def _download_latest_release():
         headers={"Accept": "application/vnd.github+json", "User-Agent": "kywk-updater"},
     )
     try:
-        with urllib.request.urlopen(request, timeout=30, context=_https_context()) as response:
+        with urllib.request.urlopen(request, timeout=30, context=create_https_context()) as response:
             release = json.loads(response.read().decode("utf-8"))
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as error:
         raise RuntimeError("Could not check GitHub Releases: {}".format(error))
@@ -76,7 +61,7 @@ def _download_latest_release():
         asset["browser_download_url"], headers={"User-Agent": "kywk-updater"}
     )
     try:
-        with urllib.request.urlopen(request, timeout=120, context=_https_context()) as response:
+        with urllib.request.urlopen(request, timeout=120, context=create_https_context()) as response:
             return release.get("tag_name", "latest"), response.read()
     except (urllib.error.URLError, TimeoutError) as error:
         raise RuntimeError("Could not download {}: {}".format(asset_name, error))

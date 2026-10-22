@@ -14,5 +14,5 @@ kywk-php = "kywk_tasks:main_php"
 kywk-git = "kywk_tasks:main_git"
 
 [tool.setuptools]
-py-modules = ["kywk_tasks", "kywk"]
+py-modules = ["kywk_tasks", "kywk", "kywk_ssl"]
 package-dir = {"" = "scripts"}

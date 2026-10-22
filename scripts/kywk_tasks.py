@@ -14,6 +14,7 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from kywk_ssl import create_https_context
 
 
 DEFAULT_CONFIG = Path.home() / ".config" / "kywk" / "config.json"
@@ -115,7 +116,11 @@ def ollama_chat(config, system_prompt, prompt):
         headers={"Content-Type": "application/json"}, method="POST"
     )
     try:
-        with urllib.request.urlopen(req, timeout=int(config.get("timeout_seconds", 120))) as response:
+        with urllib.request.urlopen(
+            req,
+            timeout=int(config.get("timeout_seconds", 120)),
+            context=create_https_context(),
+        ) as response:
             payload = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
